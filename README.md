@@ -10,6 +10,12 @@ This repository is implemented by Pytorch.
 
 ## Getting Start
 ### Download data
+- Download in current space
+- Input : CIFAR10 URL
+- Output : raw_data folder, 8 files
+```shell
+python dataset_download.py
+```
 
 ### Preprocessing
 
