@@ -17,7 +17,13 @@ This repository is implemented by Pytorch.
 python dataset_download.py
 ```
 
-### Preprocessing
+### Check dataset
+- Make data instance for dataloader
+- Input : raw_data folder, data_batch files
+- Output : show image
+```shell
+python check_dataset.py
+```
 
 ### modeling
 
