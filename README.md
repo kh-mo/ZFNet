@@ -2,7 +2,7 @@
 
 This repository is implemented by Pytorch.
 
-**ZFNet**: [Paper](https://arxiv.org/abs/1311.2901)
+**ZFNet**: [Paper](https://arxiv.org/abs/1311.2901) | accepted ECCV 2014
 
 ## Result
 
