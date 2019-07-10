@@ -5,43 +5,44 @@ from check_dataset import mytrainset
 import torch
 import torch.nn as nn
 import torch.utils.data
+import torch.nn.functional as f
 
 class ConvNet(nn.Module):
     def __init__(self):
         super(ConvNet, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=5)
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True))
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        )
         self.fc1 = nn.Linear(6*6*64, 1024)
         self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(1024, 10)
-        self.switch1 = None
-        self.switch2 = None
+
+        self.unpool = nn.MaxUnpool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
-        conv1_output = self.conv1(x)
-        relu1_output = self.relu1(conv1_output)
-        pool1_output, self.switch1 = self.pool1(relu1_output)
-        conv2_output = self.conv2(pool1_output)
-        relu2_output = self.relu2(conv2_output)
-        pool2_output, self.switch2 = self.pool2(relu2_output)
-        fc1_output = self.fc1(pool2_output.view(-1, 6*6*64))
+        layer1_output, switch1 = self.layer1(x)
+        layer2_output, switch2 = self.layer2(layer1_output)
+        fc1_output = self.fc1(layer2_output.view(-1, 6*6*64))
         relu3_output = self.relu3(fc1_output)
         fc2_output = self.fc2(relu3_output)
         return fc2_output
 
-    def visualization(self, x):
-        conv1_output = self.conv1(x)
-        relu1_output = self.relu1(conv1_output)
-        pool1_output, self.switch1 = self.pool1(relu1_output)
-        conv2_output = self.conv2(pool1_output)
-        relu2_output = self.relu2(conv2_output)
-        pool2_output, self.switch2 = self.pool2(relu2_output)
-
-        return
+    def visualization(self, x, layer="layer1", channel=1):
+        if layer == "layer1":
+            layer1_output, switch1 = self.layer1(x)
+            deconv1 = f.conv_transpose2d(self.unpool(layer1_output, switch1), self.layer1[0].weight)
+        else:
+            layer1_output, switch1 = self.layer1(x)
+            layer2_output, switch2 = self.layer2(layer1_output)
+            deconv2 = f.conv_transpose2d(self.unpool(layer2_output, switch2), self.layer2[0].weight)
+            deconv1 = f.conv_transpose2d(self.unpool(deconv2, switch1), self.layer1[0].weight)
+        return deconv1
 
 if __name__ == "__main__":
     # hyper_parameter
@@ -53,7 +54,6 @@ if __name__ == "__main__":
 
     # load data
     train_loader = torch.utils.data.DataLoader(mytrainset(train=True),batch_size=args.batch_size)
-    test_loader = torch.utils.data.DataLoader(mytrainset(train=False))
 
     # model
     model = ConvNet()
