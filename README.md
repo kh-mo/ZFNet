@@ -4,10 +4,6 @@ This repository is implemented by Pytorch.
 
 **ZFNet**: [Paper](https://arxiv.org/abs/1311.2901) | accepted ECCV 2014
 
-## Result
-
-## Loss
-
 ## Getting Start
 ### Download data
 - Download in current space
@@ -26,7 +22,17 @@ python check_dataset.py
 ```
 
 ### modeling
+- Input : train files
+- Output : convnet model
+```shell
+python modeling.py \
+    --batch_size = 128
+    --epochs = 50
+```
 
 ### evaluating
-
-### visualizing
+- Input : convnet model, test files
+- Output : predict category
+```shell
+python evaluating.py
+```
