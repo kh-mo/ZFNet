@@ -33,16 +33,43 @@ class ConvNet(nn.Module):
         fc2_output = self.fc2(relu3_output)
         return fc2_output
 
-    def visualization(self, x, layer="layer1", channel=1):
+    def visualization(self, x, layer="layer1", max=True):
         if layer == "layer1":
             layer1_output, switch1 = self.layer1(x)
-            deconv1 = f.conv_transpose2d(self.unpool(layer1_output, switch1), self.layer1[0].weight)
+            if max == True:
+                mat_matrix = get_max_mat(layer1_output)
+                layer1_output = torch.mul(layer1_output, mat_matrix)
+                deconv1 = f.conv_transpose2d(self.unpool(layer1_output, switch1), self.layer1[0].weight)
+            else:
+                deconv1 = f.conv_transpose2d(self.unpool(layer1_output, switch1), self.layer1[0].weight)
         else:
             layer1_output, switch1 = self.layer1(x)
             layer2_output, switch2 = self.layer2(layer1_output)
-            deconv2 = f.conv_transpose2d(self.unpool(layer2_output, switch2), self.layer2[0].weight)
+            if max == True:
+                mat_matrix = get_max_mat(layer2_output)
+                layer2_output = torch.mul(layer2_output, mat_matrix)
+                deconv2 = f.conv_transpose2d(self.unpool(layer2_output, switch2), self.layer2[0].weight)
+            else:
+                deconv2 = f.conv_transpose2d(self.unpool(layer2_output, switch2), self.layer2[0].weight)
             deconv1 = f.conv_transpose2d(self.unpool(deconv2, switch1), self.layer1[0].weight)
         return deconv1
+
+# get accuracy score function
+def get_acc(pred, label):
+    pred_idx = torch.argmax(pred, dim=1)
+    acc = 0
+    for idx, _ in enumerate(pred_idx):
+        if pred_idx[idx].item() == label[idx].item():
+            acc += 1
+    acc /= len(pred_idx)
+    return acc
+
+# get max matrix for visualization
+def get_max_mat(output):
+    indice = (output==torch.max(output)).nonzero()
+    max_mat = torch.zeros_like(output)
+    max_mat[indice[0][0],indice[0][1],indice[0][2],indice[0][3]] = 1
+    return max_mat
 
 if __name__ == "__main__":
     # hyper_parameter
@@ -65,6 +92,7 @@ if __name__ == "__main__":
     # training
     for epoch in range(args.epochs):
         loss_list = []
+        acc_list = []
         for image, label in train_loader:
             image = image.to(torch.float32).to(device=args.device)
             label = label.to(device=args.device)
@@ -72,15 +100,18 @@ if __name__ == "__main__":
             pred = model(image)
             loss = loss_function(pred, label)
             loss_list.append(loss.item())
+            acc_list.append(get_acc(pred, label))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        print("epoch :", epoch, "\tloss :", sum(loss_list)/len([loss_list]))
+        print("epoch : {}, \tloss : {}, \tacc : {}".format(epoch, sum(loss_list)/len(loss_list), sum(acc_list)/len(acc_list)))
 
+    ## save model
     try:
         os.mkdir(os.path.join(os.getcwd(), "saved_model"))
     except FileExistsError as e:
         pass
     torch.save(model.state_dict(), os.path.join(os.getcwd(), "saved_model/convnet"))
+
